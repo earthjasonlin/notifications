@@ -10,6 +10,9 @@ jobs:
   monitor:
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: write
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -30,4 +33,4 @@ jobs:
         git config --global user.name 'GitHub Actions'
         git config --global user.email 'actions@github.com'
         git add .
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Update assets data [skip ci]" && git push)
+        git diff --quiet && git diff --staged --quiet || (git commit -m "[ci] Update" && git push)
