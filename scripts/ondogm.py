@@ -7,6 +7,7 @@ import json
 import urllib.request
 import urllib.error
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from modules.util import log, send_message
 
 DATA_FILE = "data/ondogm.json"
