@@ -8,7 +8,7 @@ import urllib.request
 import urllib.error
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from modules.util import log, send_message
+from modules.util import log, send_telegram
 
 DATA_FILE = "data/ondogm.json"
 
@@ -69,6 +69,8 @@ Name: {ticker} ({name})"""
 def main():
     current_data = fetch_assets()
     current_assets = current_data.get("assets", [])
+    last_updated_at = current_data.get('lastUpdatedAt')
+    del current_data['lastUpdatedAt']
 
     previous_data = load_previous_data()
     previous_assets = previous_data.get("assets", [])
@@ -90,7 +92,7 @@ def main():
             log(f"Found {len(new_assets)} new assets")
             for asset in new_assets:
                 message = format_asset_message(asset)
-                send_message(message)
+                send_telegram(message)
         else:
             log("Asset count increased but no new symbols found (possible data change)")
     else:
