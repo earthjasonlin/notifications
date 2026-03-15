@@ -11,7 +11,7 @@ def log(msg):
     print(f"[{datetime.now().isoformat()}] {msg}")
 
 
-def send_message(message):
+def send_telegram(message):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         log("Telegram credentials not configured")
         return False
