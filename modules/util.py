@@ -48,7 +48,11 @@ def send_esp32(message, post_id=None, feed_id=None):
         return -1
 
     try:
-        url = f"{ESP32_API}/api/{"post" if not post_id else "feed"}/{post_id if not post_id else feed_id}"
+        url = ""
+        if post_id:
+            url = f"{ESP32_API}/api/post/{post_id}"
+        else:
+            url = f"{ESP32_API}/api/feed/{feed_id}"
 
         data = json.dumps({"data": message}).encode("utf-8")
 
