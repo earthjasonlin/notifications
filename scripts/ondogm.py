@@ -75,7 +75,7 @@ def main():
     current_data = fetch_assets()
     current_assets = current_data.get("assets", [])
 
-    current_symbols = [asset.get("symbol") for asset in current_assets if asset.get("symbol")]
+    current_symbols = sorted(asset.get("symbol") for asset in current_assets if asset.get("symbol"))
 
     previous_data = load_previous_data()
     previous_symbols = previous_data.get("assets", [])
@@ -88,6 +88,7 @@ def main():
 
     if first_post_id:
         result = send_esp32(f"Total: {len(current_symbols)}", post_id=first_post_id)
+        first_post_id = result
         log(f"Updated existing ESP32 post with ID: {first_post_id}")
     else:
         result = send_esp32(f"Total: {len(current_symbols)}", feed_id="1")
