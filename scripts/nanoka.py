@@ -9,7 +9,7 @@ import urllib.request
 import urllib.error
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from modules.util import log, send_telegram
+from modules.util import log, send_telegram, send_esp32
 
 DATA_FILE = "data/nanoka.json"
 MANIFEST_URL = "https://static.nanoka.cc/manifest.json"
@@ -79,6 +79,13 @@ def format_telegram_message(changes):
             lines.append(f"{game.upper()} {key}: {old} -> {new}")
     return "\n".join(lines)
 
+def format_esp32_message(changes):
+    lines = []
+    for game, change in changes.items():
+        for key, (old, new) in change.items():
+            lines.append(f"{game.upper()} {key}: {old} -> {new}")
+    return ",".join(lines)
+
 
 def main():
     current_manifest = fetch_manifest()
@@ -90,8 +97,32 @@ def main():
     else:
         previous_versions = previous_data
 
+    esp_parts = []
+    for game, game_vers in current_versions.items():
+        live = game_vers.get('live', 'none')
+        latest = game_vers.get('latest', 'none')
+        esp_parts.append(f"{game} {live} {latest}")
+
+    esp_message = ", ".join(esp_parts)
+
+    # key 2 for Nanoka
+    first_post_id = previous_data.get("first_post") if isinstance(previous_data, dict) else None
+
+    if first_post_id:
+        result = send_esp32(esp_message, post_id=first_post_id)
+        log(f"Updated existing ESP32 post with ID: {first_post_id}")
+    else:
+        result = send_esp32(esp_message, feed_id="2")
+        if result and isinstance(result, str):
+            current_versions["first_post"] = result
+            log(f"Created new ESP32 post with ID: {result}")
+        else:
+            log(f"Failed to get post ID from send_esp32, result: {result}")
+
     changes_detected = {}
     for game, current_game_vers in current_versions.items():
+        if game == "first_post":
+            continue
         previous_game_vers = previous_versions.get(game, {})
         for ver_key, current_val in current_game_vers.items():
             previous_val = previous_game_vers.get(ver_key)
@@ -102,8 +133,8 @@ def main():
 
     if changes_detected:
         log(f"Detected changes: {changes_detected}")
-        message = format_telegram_message(changes_detected)
-        send_telegram(message)
+        send_telegram(format_telegram_message(changes_detected))
+        send_esp32(format_esp32_message(changes_detected), feed_id="2")
     else:
         log("No version changes detected.")
 

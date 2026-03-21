@@ -8,7 +8,7 @@ import urllib.request
 import urllib.error
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from modules.util import log, send_telegram
+from modules.util import log, send_telegram, send_esp32
 
 DATA_FILE = "data/ondogm.json"
 
@@ -69,7 +69,6 @@ Name: {ticker} ({name})"""
 def main():
     current_data = fetch_assets()
     current_assets = current_data.get("assets", [])
-    last_updated_at = current_data.get('lastUpdatedAt')
     del current_data['lastUpdatedAt']
 
     previous_data = load_previous_data()
@@ -77,6 +76,20 @@ def main():
     if len(previous_assets) == 0:
         previous_data = current_data
         previous_assets = previous_data.get("assets", [])
+
+    # feed 1 for ONDO GM
+    first_post_id = previous_data.get("first_post")
+
+    if first_post_id:
+        result = send_esp32(f"Total: {len(current_assets)}", post_id=first_post_id)
+        log(f"Updated existing ESP32 post with ID: {first_post_id}")
+    else:
+        result = send_esp32(f"Total: {len(current_assets)}", feed_id="1")
+        if result:
+            current_data["first_post"] = result
+            log(f"Created new ESP32 post with ID: {result}")
+        else:
+            log(f"Failed to get post ID from send_esp32, result: {result}")
 
     if len(current_assets) > len(previous_assets):
         old_symbols = {
@@ -92,6 +105,7 @@ def main():
             log(f"Found {len(new_assets)} new assets")
             for asset in new_assets:
                 message = format_asset_message(asset)
+                send_esp32(f"{asset.get("symbol", "N/A")} {asset.get("underlyingMarket", {}).get("name")}", feed_id="1")
                 send_telegram(message)
         else:
             log("Asset count increased but no new symbols found (possible data change)")
