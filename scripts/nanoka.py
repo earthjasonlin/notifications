@@ -113,7 +113,7 @@ def main():
         log(f"Updated existing ESP32 post with ID: {first_post_id}")
     else:
         result = send_esp32(esp_message, feed_id="2")
-        if result and isinstance(result, str):
+        if result:
             current_versions["first_post"] = result
             log(f"Created new ESP32 post with ID: {result}")
         else:
