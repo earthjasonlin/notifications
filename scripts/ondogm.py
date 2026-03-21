@@ -42,15 +42,20 @@ def load_previous_data():
                 return data
         except Exception as e:
             log(f"Error loading previous data: {str(e)}")
-    return {"assets": []}
+    return {"assets": [], "first_post": None}
 
 
-def save_current_data(data):
+def save_current_data(assets_symbols, first_post=None):
+    """保存资产符号列表和first_post到文件"""
     try:
         os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
+        data = {
+            "assets": assets_symbols,
+            "first_post": first_post
+        }
         with open(DATA_FILE, "w") as f:
             json.dump(data, f, indent=2)
-        log(f"Saved current data with {len(data.get('assets', []))} assets")
+        log(f"Saved {len(assets_symbols)} asset symbols to data file")
     except Exception as e:
         log(f"Error saving data: {str(e)}")
 
@@ -69,50 +74,50 @@ Name: {ticker} ({name})"""
 def main():
     current_data = fetch_assets()
     current_assets = current_data.get("assets", [])
-    del current_data['lastUpdatedAt']
+
+    current_symbols = [asset.get("symbol") for asset in current_assets if asset.get("symbol")]
 
     previous_data = load_previous_data()
-    previous_assets = previous_data.get("assets", [])
-    if len(previous_assets) == 0:
-        previous_data = current_data
-        previous_assets = previous_data.get("assets", [])
+    previous_symbols = previous_data.get("assets", [])
+
+    if len(previous_symbols) == 0:
+        previous_symbols = current_symbols
 
     # feed 1 for ONDO GM
     first_post_id = previous_data.get("first_post")
 
     if first_post_id:
-        result = send_esp32(f"Total: {len(current_assets)}", post_id=first_post_id)
+        result = send_esp32(f"Total: {len(current_symbols)}", post_id=first_post_id)
         log(f"Updated existing ESP32 post with ID: {first_post_id}")
     else:
-        result = send_esp32(f"Total: {len(current_assets)}", feed_id="1")
+        result = send_esp32(f"Total: {len(current_symbols)}", feed_id="1")
         if result:
-            current_data["first_post"] = result
+            first_post_id = result
             log(f"Created new ESP32 post with ID: {result}")
         else:
             log(f"Failed to get post ID from send_esp32, result: {result}")
 
-    if len(current_assets) > len(previous_assets):
-        old_symbols = {
-            asset.get("symbol") for asset in previous_assets if asset.get("symbol")
-        }
+    if len(current_symbols) > len(previous_symbols):
+        old_symbols_set = set(previous_symbols)
         new_assets = [
-            asset
-            for asset in current_assets
-            if asset.get("symbol") and asset.get("symbol") not in old_symbols
+            asset for asset in current_assets
+            if asset.get("symbol") and asset.get("symbol") not in old_symbols_set
         ]
 
         if new_assets:
             log(f"Found {len(new_assets)} new assets")
             for asset in new_assets:
                 message = format_asset_message(asset)
-                send_esp32(f"{asset.get("symbol", "N/A")} {asset.get("underlyingMarket", {}).get("name")}", feed_id="1")
+                symbol = asset.get("symbol", "N/A")
+                name = asset.get("underlyingMarket", {}).get("name", "")
+                send_esp32(f"{symbol} {name}", feed_id="1")
                 send_telegram(message)
         else:
             log("Asset count increased but no new symbols found (possible data change)")
     else:
         log("No new assets detected")
 
-    save_current_data(current_data)
+    save_current_data(current_symbols, first_post_id)
 
 
 if __name__ == "__main__":
