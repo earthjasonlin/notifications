@@ -42,10 +42,10 @@ def send_telegram(message):
 def send_esp32(message, post_id=None, feed_id=None):
     if not ESP32_API:
         log("ESP32 API not configured")
-        return -1
+        return None
     if not post_id and not feed_id:
         log("PostID and FeedID both None")
-        return -1
+        return None
 
     try:
         url = ""
@@ -68,7 +68,7 @@ def send_esp32(message, post_id=None, feed_id=None):
                 return result.get("post_id")
             else:
                 log(f"ESP32 API error: {result}")
-                return -1
+                return None
 
     except Exception as e:
         log(f"Error sending ESP32 message: {str(e)}")
